@@ -1,0 +1,133 @@
+from __future__ import division
+from cxi_xdr_xes import Load_object, read_objects
+from read_files import read_cxi_merge, read_random_orientation
+import sys
+from libtbx.option_parser import option_parser
+from cctbx.array_family import flex
+import time
+def get_Ih(hkl_index, I, S, frames, G, n_Miller):
+  index=hkl_index[0]
+  Nsum=0
+  Dsum=0
+  Ih=flex.double(n_Miller)
+  for i in range(len(I)):
+    if index==hkl_index[i]:
+      Nsum=Nsum+I[i]*S[i]*G[frames[i]]
+      Dsum=Dsum+S[i]*G[frames[i]]*G[frames[i]]
+    else:
+      Ih[index]=Nsum/Dsum
+      index=hkl_index[i]
+      Nsum=I[i]*S[i]*G[frames[i]]
+      Dsum=S[i]*G[frames[i]]*G[frames[i]]
+  Ih[-1]=Nsum/Dsum
+  return Ih
+
+args = sys.argv[1:]
+if len(args) > 0:    # if real data provided
+  command_line = (option_parser()
+                 .option("--input_obs", "-o",
+                         type="string",
+                         help="Directory for input _observations.db file.")
+                 .option("--input_method", "-n",
+                         type="int",
+                         help="The method to be used 1 for G only, 2 for G cycles with Ih constant and 3 for refining I and G as independent variables using curvatures.")
+
+                 ).process(args=args)
+  observations = command_line.options.input_obs
+  method = command_line.options.input_method
+  f=open(observations)
+  (I, S, H, Miller_list, F)=read_cxi_merge(f)
+else:             # if not then perform test of perfect scaling case
+  (I, S, H, Miller_list, F, Im)=read_random_orientation()
+
+if method==1:
+  from cxi_xdr_xes.XScale.minimizers.scaling_minimizer_G import xscale
+  print "Loading objects..........May take while....."
+  write_I=open("test_data/Ih_G_only.txt","w+")
+  write_G=open("test_data/G_only.txt","w+")
+  n_frames = max(F)+1
+  (MI, Fr) = Load_object(I, S, H, Miller_list, F, n_frames)
+  fit=xscale(MI, Fr, n_frames)
+  (Ih,mi)=read_objects(MI)
+  for (i,j) in zip(mi, Ih):
+    print>>write_I, i, j 
+  write_I.close()
+  for i in fit.x:
+    print>>write_G, i
+  write_G.close()
+
+if method==2:
+  from cxi_xdr_xes.XScale.minimizers.scaling_minimizer_G_cycles import xscale
+  write_I=open("test_data/Ih_G_cycle.txt","w+")
+  write_G=open("test_data/G_cycle.txt","w+")
+  N_miller=max(H)+1
+  G=flex.double(max(F)+1,1)
+  t1=time.time()
+  Ih=get_Ih(H, I, S, F, G, N_miller)
+  for i in range(20):
+    fit=xscale(I, S, H, F, flex.double(G), flex.double(Ih))
+    G=fit.x
+    Ih=get_Ih(H, I, S, F, G, N_miller)
+  for i in range(len(Ih)):
+    if Ih[i]!=0:
+      print>>write_I, i, Ih[i]
+  for i in G:print>>write_G, i
+  write_G.close()
+  write_I.close()  
+  print "Total time for 10 cycles", time.time()-t1
+
+if method==3:
+  from cxi_xdr_xes.XScale.minimizers.scaling_minimizer_wI_G import xscale
+  write_I=open("test_data/Ih_G_wI.txt","w+")
+  write_G=open("test_data/G_wI.txt","w+")
+  N_miller=max(H)+1
+  G=flex.double(max(F)+1,1)
+  Ih=get_Ih(H, I, S, F, G, N_miller)
+  fit=xscale(I, S, H, F, flex.double(G), flex.double(Ih))
+  ih=fit.x[len(G):]
+  for i in range(len(ih)):
+    if ih[i]!=1:
+      print>>write_I, i, Ih[i]*ih[i]
+  write_I.close()
+  for i in range(len(G)):
+    print>>write_G, fit.x[i]
+  write_G.close()
+
+if method==4:
+  from scitbx.lstbx import normal_eqns_solving
+  from cxi_xdr_xes.XScale.minimizers.scaling_LM_minimizer_wI_G import xscale
+  write_I=open("test_data/Ih_G_wI_LM.txt","w+")
+  write_G=open("test_data/G_LM.txt","w+")
+  N_miller=max(H)+1
+  G=flex.double(max(F)+1,1)
+  Ih=get_Ih(H, I, S, F, G, N_miller)
+  fit=xscale(I, S, H, F, G, Ih)
+  iterations = normal_eqns_solving.levenberg_marquardt_iterations(
+          fit,
+          gradient_threshold = 1.E-1)
+  ih=fit.x[len(G):]
+  for i in range(len(ih)): 
+    if ih[i]!=1:
+      print>>write_I, i, ih[i]*Ih[i]
+  write_I.close()
+  for i in range(len(G)): 
+    print>>write_G, fit.x[i]
+  write_G.close()
+
+#if method==5:
+#  N_miller=max(H)+1
+#  G=flex.double(max(F)+1,1)
+#  Ih=get_Ih(H, I, S, F, G, N_miller)
+#  print "Done calculating Ih"
+#  from scitbx.lstbx import normal_eqns_solving
+#  from scaling_LM_minimizer_wI_G_sparse import xscale
+#  fit=xscale(I, S, H, F, G, Ih)
+#  iterations = normal_eqns_solving.levenberg_marquardt_iterations(
+#          fit,
+#          gradient_threshold = 1.E-4)
+#  Ih=fit.x[len(G):]
+#  write_G=open("G_LM_sparse.txt","w+")
+#  for i in range(len(G)): print>>write_G, fit.x[i]
+#  write_G.close()
+
+

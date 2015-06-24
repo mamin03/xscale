@@ -1,0 +1,68 @@
+\documentclass[a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+
+\title{Scaling target function and derivatives}
+
+\author{Muhamed Amin}
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l|l|r}
+Miller Index & Observation & Frame Scale Factor \\\hline
+ 0 & $I_{01}$ & $G_1$ \\
+ 1 & $I_{11}$ & $G_1$ \\
+ 0 & $I_{02}$ & $G_2$ \\
+ 1 & $I_{13}$ & $G_3$
+\end{tabular}
+\caption{\label{tab:widgets}An example table of 4 observations for 2 miller indecis. Index 0 has 2 observations in frames 1 and 2. Index 1 has 2 observations in frames 2 and 3. The first digit of the subscript in the observation column refers to the miller index, while the second refers to the frame ID.}
+\end{table}
+
+\section{Introduction}
+Scaling is needed to correct for the systematic errors between different frames. The target function to be minimized is:\\\\
+$F=\sum_h \sum_m (I_{hm}-G_{m}I_{h} )^2$\\\\
+where $I_{hm}$ is the observed intensity of miller index h in frame m, $G_m$ is the scale factor for frame m and $I_h$ is defined as:\\\\
+
+$I_{h}=\sum_m I_{hm}G_m/\sum_mG^{2}_m$\\\\
+The weighting factor is set to 1 for simplicity.
+The derivatives of F with respect to a given $G_n$:\\\\
+$\frac{\partial F}{\partial G_n}=-2\sum_h\sum_m (I_h\delta_{mn} +G_m\frac{\partial I_h}{\partial G_n})t$ \\\\
+where:\\\\ 
+$t=(I_{hm}-G_{m}I_{h} )\\\\
+\frac{\partial I_h}{\partial G_n}=(\sum_mG^{2}_m)(I_{hn})-(\sum_m I_{hm}G_m)(2G_n)/(\sum_mG^{2}_m)^2$\\\\
+To understand how the derivatives are calculated, let's consider the example in table 1. There are four observations for 2 miller indecis. Each miller index is observed in 2 different frames. Miller index 0 was observed in frames 1 and 2. Miller index 1 was observed in frames 2 and 3.
+
+
+\subsection{Mathematical derivation}
+
+$F=(I_{01}-G_{1}I_{0} )^2+(I_{02}-G_{2}I_{0} )^2+(I_{11}-G_{1}I_{1} )^2+(I_{13}-G_{3}I_{1} )^2 \\\\
+\frac{\partial F}{\partial G_{1}}= -2[(G_{1}*\frac{\partial I_{0}}{\partial G_{1}}+I_{0})t_1 +(G_{2}*\frac{\partial I_{0}}{\partial G_{1}})t_2+(G_{1}*\frac{\partial I_{1}}{\partial G_{1}}+I_{1})t_3+(G_{3}*\frac{\partial I_{1}}{\partial G_{1}})t_4]\\\\
+\frac{\partial F}{\partial G_{2}}= -2[(G_{1}*\frac{\partial I_{0}}{\partial G_{2}})t_1 +(G_{2}*\frac{\partial I_{0}}{\partial G_{2}}+I_{0})t_2]\\\\
+\frac{\partial F}{\partial G_{3}}= -2[(G_{1}*\frac{\partial I_{1}}{\partial G_{3}})t_3+(G_{3}*\frac{\partial I_{1}}{\partial G_{3}}+I_{1})t_4]\\\\$
+where :\\\\
+$t_1=(I_{01}-G_{1}I_{0} )\\
+t_2=(I_{02}-G_{2}I_{0} )\\
+t_3=(I_{11}-G_{1}I_{1} )\\
+t_4=(I_{13}-G_{3}I_{1} )$\\\\
+Note that $\frac{\partial I_{0}}{\partial G_{3}},\frac{\partial I_{1}}{\partial G_{2}}$ are zeros because miller index 0 doesn't have any observation in frame 3 and miller index 1 doesn't have any observation in frame 2\\\\$
+I_{0}=(I_{01}*G_{1}+I_{02}*G_{2})/(G_{1}^{2} +G_{2}^{2}) \\\\
+\frac{\partial I_{0}}{\partial G_{1}}=((G_{1}^{2} +G_{2}^{2})*I_{01}-((I_{01}*G_{1}+I_{02}*G_{2})*2*G_{1})/(G_{1}^{2} +G_{2}^{2})^{2}\\\\
+\frac{\partial I_{0}}{\partial G_{2}}=((G_{1}^{2} +G_{2}^{2})*I_{02}-((I_{01}*G_{1}+I_{02}*G_{2})*2*G_{2})/(G_{1}^{2} +G_{2}^{2})^{2}\\\\
+\frac{\partial I_{0}}{\partial G_{3}}=0\\\\
+I_{1}=(I_{11}*G_{1}+I_{13}*G_{3})/(G_{1}^{2} +G_{3}^{2})\\\\
+\frac{\partial I_{1}}{\partial G_{1}}=((G_{1}^{2} +G_{3}^{2})*I_{11}-((I_{11}*G_{1}+I_{13}*G_{3})*2*G_{1})/(G_{1}^{2} +G_{3}^{2})^{2}\\\\
+\frac{\partial I_{1}}{\partial G_{3}}=((G_{1}^{2} +G_{3}^{2})*I_{13}-((I_{11}*G_{1}+I_{13}*G_{3})*2*G_{3})/(G_{1}^{2} +G_{3}^{2})^{2}\\\\
+\frac{\partial I_{1}}{\partial G_{2}}=0$
+
+\end{document}
+

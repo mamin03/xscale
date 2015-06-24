@@ -1,0 +1,56 @@
+from __future__ import division
+from cctbx.array_family import flex
+from scitbx.lbfgs.tst_curvatures import lbfgs_with_curvatures_mix_in
+#from Thread import _xray_frame_process
+#import multiprocessing
+from cxi_xdr_xes import get_f_g
+from scitbx import lbfgs
+import time
+class xscale(lbfgs_with_curvatures_mix_in):
+  def __init__(self, MI, Fr, n_frames):
+#    manager = multiprocessing.Manager()
+#    self._queue = manager.Queue()
+#    self._proc = multiprocessing.Process(target=_xray_frame_process,args=(self._queue,))
+#    self._proc.start()
+    self.counter=0
+    self.MI = MI
+    self.Fr = Fr
+    self.n_frames=n_frames
+    self.x = flex.double(self.n_frames)
+    for i in range(self.n_frames):
+     self.x[i] = 1 # initiate all scale factors to 1i
+    print 'START'
+    termination_params = lbfgs.termination_parameters(
+                      traditional_convergence_test=False,
+                       max_iterations=1000)
+    t1=time.time()
+    self.minimizer = lbfgs.run(target_evaluator=self, termination_params=termination_params)
+    print "Total time for calculating functional and derivatives ", time.time()-t1
+#    super(xscale, self).__init__()
+#    try:
+#      self._queue.put(None)
+#    except Exception:
+#      pass
+    print "End of minimization: Converged"
+#    self._proc.join()
+
+  def compute_functional_and_gradients(self):
+   t1=time.time()
+   (f, g, c) = get_f_g(self.MI, self.x, self.Fr) #C++ code that returns the
+   print "Total time  ", time.time()-t1
+   self.c = c
+
+   print 'The value of F', f
+   self.counter = self.counter+1
+#   while True:
+#     try:
+#       self._queue.put((f, self.counter), timeout=1)
+#       break
+#     except Exception:
+#       print 'exception'
+#       pass
+   return f, g
+
+  def curvatures(self):
+   print 'Curvature Called'
+   return self.c
